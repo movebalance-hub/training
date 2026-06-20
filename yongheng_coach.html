@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>永衡運動｜教練後台</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f6f3;
+  --surface: #ffffff;
+  --surface2: #f0ede8;
+  --border: rgba(0,0,0,0.10);
+  --border-mid: rgba(0,0,0,0.18);
+  --text: #1a1a18;
+  --text2: #6b6b67;
+  --text3: #a8a8a3;
+  --accent: #1a1a18;
+  --accent-fg: #f7f6f3;
+  --green-bg: #e8f5e4; --green-text: #2d6b22;
+  --blue-bg: #e4eef8;  --blue-text: #1a4a7a;
+  --amber-bg: #fdf0d8; --amber-text: #7a4e10;
+  --red-bg: #fce8e8;   --red-text: #7a1f1f;
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+/* ── AUTH ── */
+.auth-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1.25rem; }
+.auth-logo { font-size: 20px; font-weight: 500; letter-spacing: -.02em; margin-bottom: .25rem; }
+.auth-tagline { font-size: 13px; color: var(--text3); margin-bottom: 2.5rem; }
+.auth-card { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.75rem 1.5rem; box-shadow: var(--shadow); }
+.auth-title { font-size: 16px; font-weight: 500; margin-bottom: 1.25rem; }
+.auth-field { margin-bottom: 1rem; }
+.auth-label { font-size: 11px; color: var(--text2); margin-bottom: .375rem; display: block; font-family: 'DM Mono', monospace; letter-spacing: .05em; text-transform: uppercase; }
+.auth-input { width: 100%; padding: .625rem .875rem; border: 1px solid var(--border-mid); border-radius: var(--r-sm); font-size: 14px; background: var(--surface); color: var(--text); font-family: inherit; transition: border .15s; }
+.auth-input:focus { outline: none; border-color: var(--accent); }
+.auth-btn { width: 100%; padding: .75rem; background: var(--accent); color: var(--accent-fg); border: none; border-radius: var(--r-sm); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: opacity .15s; }
+.auth-btn:hover { opacity: .85; }
+.auth-btn:disabled { opacity: .45; cursor: not-allowed; }
+.auth-err { font-size: 12px; color: #c0392b; margin-top: .75rem; text-align: center; min-height: 18px; }
+.auth-note { font-size: 11px; color: var(--text3); margin-top: 1rem; text-align: center; line-height: 1.6; }
+
+/* ── LAYOUT ── */
+.app { display: none; min-height: 100vh; }
+.app.active { display: flex; flex-direction: column; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: .75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.topbar-brand { font-size: 15px; font-weight: 500; }
+.topbar-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: .75rem; }
+.coach-name { font-size: 13px; color: var(--text2); }
+.btn-sm { padding: 5px 12px; border: 1px solid var(--border-mid); border-radius: var(--r-sm); font-size: 12px; cursor: pointer; background: var(--surface); color: var(--text2); font-family: inherit; transition: background .12s; }
+.btn-sm:hover { background: var(--surface2); }
+.main { flex: 1; padding: 1.5rem; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+/* ── MEMBER LIST ── */
+.section-title { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: .875rem; font-family: 'DM Mono', monospace; }
+.member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+.member-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 1.125rem 1.25rem; cursor: pointer; transition: box-shadow .15s, border-color .15s; box-shadow: var(--shadow); }
+.member-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: var(--border-mid); }
+.member-card.active { border-color: var(--accent); }
+.mc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: .75rem; }
+.mc-name { font-size: 15px; font-weight: 500; }
+.mc-email { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.mc-pill { font-size: 10px; padding: 3px 8px; border-radius: 8px; font-weight: 500; font-family: 'DM Mono', monospace; }
+.pill-green { background: var(--green-bg); color: var(--green-text); }
+.pill-blue  { background: var(--blue-bg);  color: var(--blue-text); }
+.pill-amber { background: var(--amber-bg); color: var(--amber-text); }
+.mc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.mc-stat { background: var(--surface2); border-radius: var(--r-sm); padding: .5rem .625rem; }
+.mc-stat-l { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; font-family: 'DM Mono', monospace; }
+.mc-stat-v { font-size: 14px; font-weight: 500; font-family: 'DM Mono', monospace; }
+.mc-no-data { font-size: 12px; color: var(--text3); padding: .5rem 0; }
+
+/* ── DETAIL PANEL ── */
+.detail-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 1.5rem; box-shadow: var(--shadow); }
+.dp-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.dp-name { font-size: 20px; font-weight: 500; }
+.dp-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.dp-tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; }
+.dp-tab { padding: 6px 14px; border-radius: var(--r-sm); font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text2); font-family: inherit; transition: all .15s; }
+.dp-tab.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.dp-panel { display: none; }
+.dp-panel.active { display: block; }
+
+/* ── INFO GRID ── */
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.25rem; }
+.ig-item { background: var(--surface2); border-radius: var(--r-sm); padding: .75rem 1rem; }
+.ig-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .3rem; font-family: 'DM Mono', monospace; }
+.ig-value { font-size: 16px; font-weight: 500; font-family: 'DM Mono', monospace; }
+.ig-unit  { font-size: 11px; color: var(--text2); margin-left: 3px; }
+
+/* ── LOG TABLE ── */
+.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log-table th { text-align: left; padding: .5rem .75rem; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; font-family: 'DM Mono', monospace; border-bottom: 1px solid var(--border); font-weight: 500; }
+.log-table td { padding: .5rem .75rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.log-table tr:last-child td { border-bottom: none; }
+.log-table tr:hover td { background: var(--surface2); }
+.tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 6px; font-family: 'DM Mono', monospace; font-weight: 500; }
+
+/* ── WEIGHTS TABLE ── */
+.wt-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1rem; }
+.wt-table th { text-align: left; padding: .5rem .75rem; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; font-family: 'DM Mono', monospace; border-bottom: 1px solid var(--border); }
+.wt-table td { padding: .625rem .75rem; border-bottom: 1px solid var(--border); }
+.wt-table tr:last-child td { border-bottom: none; }
+
+/* ── LOADING / EMPTY ── */
+.loading { text-align: center; padding: 3rem; color: var(--text3); font-size: 14px; }
+.empty { text-align: center; padding: 2rem; color: var(--text3); font-size: 13px; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--text2); border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: -4px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── WEEK PROGRESS BAR ── */
+.week-bar-wrap { margin-bottom: .25rem; }
+.week-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.week-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.week-bar-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
+
+@media (max-width: 700px) {
+  .member-grid { grid-template-columns: 1fr; }
+  .main { padding: 1rem; }
+  .info-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH ══ -->
+<div id="auth-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">永衡運動工作室</div>
+    <div class="auth-tagline">教練管理後台</div>
+    <div class="auth-card">
+      <div class="auth-title">教練登入</div>
+      <div class="auth-field">
+        <label class="auth-label">電子郵件</label>
+        <input class="auth-input" type="email" id="login-email" placeholder="coach@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">密碼</label>
+        <input class="auth-input" type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="auth-btn" id="btn-login" onclick="doLogin()">登入後台</button>
+      <div class="auth-err" id="login-err"></div>
+      <div class="auth-note">此系統僅限已設定為教練角色的帳號登入<br>請聯繫系統管理員取得帳號</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app" class="app">
+  <div class="topbar">
+    <div>
+      <div class="topbar-brand">永衡運動工作室　教練後台</div>
+      <div class="topbar-sub" id="topbar-sub">載入中…</div>
+    </div>
+    <div class="topbar-right">
+      <span class="coach-name" id="coach-name"></span>
+      <button class="btn-sm" onclick="doLogout()">登出</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="loading-state" class="loading"><span class="spinner"></span>載入學員資料…</div>
+
+    <div id="dashboard" style="display:none">
+      <!-- Member List -->
+      <div class="section-title" id="member-count-label">學員列表</div>
+      <div class="member-grid" id="member-grid"></div>
+
+      <!-- Detail Panel -->
+      <div id="detail-wrap" style="display:none">
+        <div class="section-title" id="detail-section-label">學員詳細資料</div>
+        <div class="detail-panel">
+          <div class="dp-header">
+            <div>
+              <div class="dp-name" id="dp-name">—</div>
+              <div class="dp-meta" id="dp-meta">—</div>
+            </div>
+          </div>
+          <div class="dp-tabs">
+            <button class="dp-tab active" onclick="switchTab('overview')">總覽</button>
+            <button class="dp-tab" onclick="switchTab('weights')">參考重量</button>
+            <button class="dp-tab" onclick="switchTab('logs')">訓練日誌</button>
+          </div>
+          <div id="tab-overview" class="dp-panel active"></div>
+          <div id="tab-weights" class="dp-panel"></div>
+          <div id="tab-logs" class="dp-panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://wcjxtrlugszykhisjtdj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indjanh0cmx1Z3N6eWtoaXNqdGRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODY0MTcsImV4cCI6MjA5NzM2MjQxN30.IfLAYfAFxM1JmNa-B0Z6j1WZ_ThjdTy7TeBlb-TrQok';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentCoach = null;
+let members = [];
+let selectedMember = null;
+
+const GOAL_LBL  = {strength:'肌力提升', hypertrophy:'肌肥大', both:'兩者兼顧'};
+const LEVEL_LBL = {beginner:'初階', intermediate:'中階', advanced:'進階'};
+const GENDER_LBL = {male:'男', female:'女'};
+const EX_NAME = {
+  squat:'背蹲舉', legpress:'腿推機', legext:'腿伸展', legcurl:'勾腿',
+  deadlift:'傳統硬舉', rdl:'羅馬尼亞硬舉', slrdl:'單腳硬舉',
+  bench:'槓鈴胸推', chestpress:'胸推機', dbbench:'啞鈴臥推',
+  ohp:'槓鈴肩推', dbohp:'啞鈴肩推',
+  pulldown:'滑輪下拉', seatedrow:'坐姿划船', pullup:'引體向上',
+  goblet:'高腳杯深蹲', lunge:'弓步', bulgarian:'保加利亞蹲',
+  lateralraise:'側平舉', facepull:'臉拉', reversedfly:'反向飛鳥',
+  curlbb:'槓鈴二頭彎舉', curldbb:'啞鈴二頭彎舉', hammercurl:'錘式彎舉',
+  triceppushdown:'三頭下壓', skullcrusher:'骷髏壓',
+  hipthrust:'臀橋推', calf:'小腿訓練'
+};
+const EX_UNIT = {
+  squat:'kg', deadlift:'kg', bench:'kg', ohp:'kg', rdl:'kg', slrdl:'kg',
+  dbbench:'kg', dbohp:'kg', curlbb:'kg', skullcrusher:'kg', hipthrust:'kg',
+  legpress:'格', legext:'格', legcurl:'kg', pulldown:'kg', seatedrow:'kg',
+  pullup:'下', goblet:'kg', lunge:'kg', bulgarian:'kg', lateralraise:'kg',
+  facepull:'kg', reversedfly:'kg', curldbb:'kg', hammercurl:'kg',
+  triceppushdown:'kg', chestpress:'kg', beltsquat:'kg', calf:'kg'
+};
+
+// ── AUTH ──
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  const btn = document.getElementById('btn-login');
+  const errEl = document.getElementById('login-err');
+  if (!email || !pw) { errEl.textContent = '請填寫電子郵件和密碼'; return; }
+  btn.disabled = true; btn.textContent = '登入中…';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if (error) {
+    errEl.textContent = '電子郵件或密碼錯誤';
+    btn.disabled = false; btn.textContent = '登入後台';
+    return;
+  }
+  // Check role via security definer function
+  const { data: roleData } = await sb.rpc('get_my_role');
+  if (!roleData || roleData !== 'coach') {
+    errEl.textContent = '此帳號沒有教練權限，請聯繫管理員';
+    await sb.auth.signOut();
+    btn.disabled = false; btn.textContent = '登入後台';
+    return;
+  }
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentCoach = null;
+  document.getElementById('auth-screen').style.display = '';
+  document.getElementById('app').classList.remove('active');
+}
+
+// ── LOAD DATA ──
+async function loadDashboard(coachUser) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('coach-name').textContent = coachUser.email;
+
+  // Fetch all members
+  const { data: profiles } = await sb.from('profiles').select('*').eq('role', 'member').order('name');
+  if (!profiles || profiles.length === 0) {
+    document.getElementById('loading-state').innerHTML = '<div class="empty">目前沒有學員資料</div>';
+    document.getElementById('loading-state').style.display = '';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('topbar-sub').textContent = '0 位學員';
+    return;
+  }
+
+  // Fetch all settings and states
+  const uids = profiles.map(p => p.id);
+  const [settingsRes, statesRes] = await Promise.all([
+    sb.from('member_settings').select('*').in('user_id', uids),
+    sb.from('training_state').select('*').in('user_id', uids)
+  ]);
+
+  members = profiles.map(p => {
+    const s = (settingsRes.data || []).find(x => x.user_id === p.id);
+    const st = (statesRes.data || []).find(x => x.user_id === p.id);
+    return { profile: p, settings: s || null, state: st || null };
+  });
+
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('dashboard').style.display = '';
+  document.getElementById('member-count-label').textContent = `學員列表（${members.length} 位）`;
+  document.getElementById('topbar-sub').textContent = `${members.length} 位學員`;
+
+  renderMemberGrid();
+}
+
+function renderMemberGrid() {
+  const grid = document.getElementById('member-grid');
+  grid.innerHTML = members.map((m, i) => {
+    const s = m.settings;
+    const st = m.state;
+    const hasData = !!s;
+    const completedThisWeek = st ? Object.keys(st.completed_days || {}).filter(k => k.startsWith((st.current_week||1)+'_')).length : 0;
+    const totalDays = s?.days || 0;
+    const goalPill = s?.goal ? `<span class="mc-pill pill-blue">${GOAL_LBL[s.goal]||s.goal}</span>` : '';
+    const levelPill = s?.level ? `<span class="mc-pill pill-amber">${LEVEL_LBL[s.level]||s.level}</span>` : '';
+    return `
+    <div class="member-card" id="mc-${i}" onclick="selectMember(${i})">
+      <div class="mc-header">
+        <div>
+          <div class="mc-name">${m.profile.name || '未命名'}</div>
+          <div class="mc-email">${m.profile.id.slice(0,8)}…</div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${goalPill}${levelPill}</div>
+      </div>
+      ${hasData ? `
+      <div class="mc-stats">
+        <div class="mc-stat"><div class="mc-stat-l">週次</div><div class="mc-stat-v">W${st?.current_week||1}</div></div>
+        <div class="mc-stat"><div class="mc-stat-l">週期</div><div class="mc-stat-v">M${st?.mesocycle||1}</div></div>
+        <div class="mc-stat"><div class="mc-stat-l">本週</div><div class="mc-stat-v">${completedThisWeek}/${totalDays}天</div></div>
+      </div>
+      ` : '<div class="mc-no-data">尚未完成設定</div>'}
+    </div>`;
+  }).join('');
+}
+
+async function selectMember(idx) {
+  selectedMember = members[idx];
+  document.querySelectorAll('.member-card').forEach((c,i) => c.classList.toggle('active', i===idx));
+  document.getElementById('detail-wrap').style.display = '';
+  document.getElementById('detail-section-label').textContent = `${selectedMember.profile.name || '學員'} 的詳細資料`;
+
+  const m = selectedMember;
+  const s = m.settings;
+  const st = m.state;
+  document.getElementById('dp-name').textContent = m.profile.name || '未命名';
+  document.getElementById('dp-meta').textContent = m.profile.id;
+
+  renderOverview(s, st);
+  renderWeights(s);
+  await renderLogs(m.profile.id, s, st);
+
+  switchTab('overview');
+  document.getElementById('detail-wrap').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function renderOverview(s, st) {
+  const el = document.getElementById('tab-overview');
+  if (!s) { el.innerHTML = '<div class="empty">尚未完成問卷設定</div>'; return; }
+  const completedThisWeek = st ? Object.keys(st.completed_days || {}).filter(k => k.startsWith((st.current_week||1)+'_')).length : 0;
+  const totalDays = s.days || 0;
+  const pct = totalDays > 0 ? Math.round(completedThisWeek / totalDays * 100) : 0;
+
+  const totalCompleted = st ? Object.keys(st.completed_days || {}).length : 0;
+
+  el.innerHTML = `
+  <div class="info-grid">
+    <div class="ig-item"><div class="ig-label">訓練目標</div><div class="ig-value" style="font-size:13px">${GOAL_LBL[s.goal]||'—'}</div></div>
+    <div class="ig-item"><div class="ig-label">程度</div><div class="ig-value" style="font-size:13px">${LEVEL_LBL[s.level]||'—'}</div></div>
+    <div class="ig-item"><div class="ig-label">性別</div><div class="ig-value" style="font-size:13px">${GENDER_LBL[s.gender]||'—'}</div></div>
+    <div class="ig-item"><div class="ig-label">年齡</div><div class="ig-value">${s.age||'—'}<span class="ig-unit">歲</span></div></div>
+    <div class="ig-item"><div class="ig-label">體重</div><div class="ig-value">${s.body_weight||'—'}<span class="ig-unit">kg</span></div></div>
+    <div class="ig-item"><div class="ig-label">每週天數</div><div class="ig-value">${s.days||'—'}<span class="ig-unit">天</span></div></div>
+    <div class="ig-item"><div class="ig-label">目前週次</div><div class="ig-value">W${st?.current_week||1}</div></div>
+    <div class="ig-item"><div class="ig-label">週期</div><div class="ig-value">M${st?.mesocycle||1}</div></div>
+    <div class="ig-item"><div class="ig-label">累積完成</div><div class="ig-value">${totalCompleted}<span class="ig-unit">天</span></div></div>
+  </div>
+  <div style="background:var(--surface2);border-radius:var(--r-md);padding:1rem 1.125rem;margin-bottom:1rem">
+    <div class="week-bar-label"><span>本週完成進度</span><span>${completedThisWeek} / ${totalDays} 天</span></div>
+    <div class="week-bar"><div class="week-bar-fill" style="width:${pct}%"></div></div>
+  </div>
+  <div style="font-size:12px;color:var(--text2)">
+    <strong>Deload 類型：</strong>${s.deload||'—'}　
+    <strong>Meso 週數設定：</strong>${s.meso||'auto'}
+    ${s.front_squat ? '　<strong>前蹲舉：</strong>已開啟' : ''}
+  </div>`;
+}
+
+function renderWeights(s) {
+  const el = document.getElementById('tab-weights');
+  if (!s || !s.weights) { el.innerHTML = '<div class="empty">無重量資料</div>'; return; }
+  const entries = Object.entries(s.weights).filter(([,v]) => v !== null && v !== undefined && v !== '');
+  if (entries.length === 0) { el.innerHTML = '<div class="empty">尚未填寫參考重量</div>'; return; }
+  el.innerHTML = `
+  <table class="wt-table">
+    <thead><tr><th>動作</th><th>重量</th><th>單位</th></tr></thead>
+    <tbody>
+      ${entries.map(([k,v]) => `
+      <tr>
+        <td>${EX_NAME[k]||k}</td>
+        <td style="font-family:'DM Mono',monospace;font-weight:500">${v}</td>
+        <td style="font-size:11px;color:var(--text3)">${EX_UNIT[k]||'kg'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function renderLogs(uid, s, st) {
+  const el = document.getElementById('tab-logs');
+  el.innerHTML = '<div class="loading"><span class="spinner"></span>載入日誌…</div>';
+  const { data: logs } = await sb.from('training_logs').select('*').eq('user_id', uid).order('week', {ascending: false}).order('day_index').limit(200);
+  if (!logs || logs.length === 0) { el.innerHTML = '<div class="empty">尚無訓練紀錄</div>'; return; }
+
+  // Group by week + day
+  const grouped = {};
+  logs.forEach(row => {
+    const key = `W${row.week||'?'}-D${(row.day_index!=null ? row.day_index+1 : '?')}`;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(row);
+  });
+
+  const html = Object.entries(grouped).map(([key, rows]) => {
+    const rowsHtml = rows.map(r => {
+      const exName = EX_NAME[r.exercise_id] || r.exercise_id || '—';
+      const unit = EX_UNIT[r.exercise_id] || 'kg';
+      const weight = r.weight != null ? `${r.weight} ${unit}` : '—';
+      const reps = r.reps != null ? `${r.reps} 下` : '—';
+      const rir = r.rir != null ? `RIR ${r.rir}` : '—';
+      return `<tr>
+        <td>${exName}</td>
+        <td style="font-family:'DM Mono',monospace">${r.set_number || '—'}</td>
+        <td style="font-family:'DM Mono',monospace">${weight}</td>
+        <td style="font-family:'DM Mono',monospace">${reps}</td>
+        <td style="font-size:12px;color:var(--text3)">${rir}</td>
+      </tr>`;
+    }).join('');
+    return `
+    <div style="margin-bottom:1.25rem">
+      <div style="font-size:12px;font-weight:500;font-family:'DM Mono',monospace;color:var(--text2);margin-bottom:.5rem;padding:.375rem .625rem;background:var(--surface2);border-radius:var(--r-sm);display:inline-block">${key}</div>
+      <table class="log-table">
+        <thead><tr><th>動作</th><th>組</th><th>重量</th><th>次數</th><th>RIR</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = html;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.dp-tab').forEach((t,i) => {
+    const names = ['overview','weights','logs'];
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.dp-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── INIT ──
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    // Verify coach role via security definer function
+    const { data: roleData } = await sb.rpc('get_my_role');
+    if (!roleData || roleData !== 'coach') {
+      await sb.auth.signOut();
+      document.getElementById('auth-screen').style.display = '';
+      document.getElementById('app').classList.remove('active');
+      document.getElementById('login-err').textContent = '此帳號沒有教練權限';
+      return;
+    }
+    currentCoach = session.user;
+    await loadDashboard(currentCoach);
+  } else {
+    document.getElementById('auth-screen').style.display = '';
+    document.getElementById('app').classList.remove('active');
+  }
+});
+</script>
+</body>
+</html>
